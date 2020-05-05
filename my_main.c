@@ -108,7 +108,7 @@ void my_main() {
 
   print_symtab();
   for (i=0;i<lastop;i++) {
-
+	tmp->lastcol = 0;
     printf("%d: ",i);
 	switch(op[i].opcode)
 	  {
@@ -155,8 +155,17 @@ void my_main() {
 					op[i].op.sphere.d[2],
 					op[i].op.sphere.r,
 					step_3d);
-		matrix_mult(peek(systems),tmp); // TODO :: ref csystem arg
-		draw_polygons( tmp, t, zb, view, light, ambient, reflect);
+		if( op[i].op.sphere.cs ){
+		  matrix_mult( lookup_symbol( op[i].op.sphere.cs->name )->s.m, tmp );
+		} else {
+		  matrix_mult(peek(systems),tmp);
+		}
+		if( op[i].op.sphere.constants ){
+		  draw_polygons( tmp, t, zb, view, light, ambient,
+						 lookup_symbol( op[i].op.sphere.constants->name )->s.c );
+		}else {
+		  draw_polygons( tmp, t, zb, view, light, ambient, reflect);
+		}
 		tmp->lastcol = 0;
 		break;
 	  case TORUS:
@@ -179,8 +188,17 @@ void my_main() {
 				  op[i].op.torus.r0,
 				  op[i].op.torus.r1,
 				  step_3d );
-		matrix_mult(peek(systems),tmp);
-		draw_polygons(tmp, t, zb, view, light, ambient, reflect); // TODO: actually use the more args
+		if( op[i].op.torus.cs ){
+		  matrix_mult( lookup_symbol( op[i].op.torus.cs->name )->s.m , tmp );
+		} else {
+		  matrix_mult(peek(systems),tmp);
+		}
+		if( op[i].op.torus.constants ){
+		  draw_polygons(tmp, t, zb, view, light, ambient,
+						lookup_symbol( op[i].op.torus.constants->name )->s.c );
+		} else {
+		  draw_polygons(tmp, t, zb, view, light, ambient, reflect); // TODO: actually use the more args
+		}
 		tmp->lastcol = 0;
 		break;
 	  case BOX:
@@ -254,6 +272,7 @@ void my_main() {
 		tmp = make_scale( op[i].op.scale.d[0], op[i].op.scale.d[1], op[i].op.scale.d[2] );
 		matrix_mult( peek(systems), tmp );
 		copy_matrix(tmp, peek(systems));
+		tmp->lastcol = 0;
 		break;
 	  case ROTATE:
 		printf("Rotate: axis: %6.2f degrees: %6.2f",
@@ -263,7 +282,17 @@ void my_main() {
 		  {
 			printf("\tknob: %s",op[i].op.rotate.p->name);
 		  }
-		// TODO: all of rotate, im confused by axis arg
+		op[i].op.rotate.degrees *= M_PI / 180;
+		if( op[i].op.rotate.axis == 0 ){
+		  tmp = make_rotX( op[i].op.rotate.degrees );
+		} else if( op[i].op.rotate.axis == 1 ){
+		  tmp = make_rotY( op[i].op.rotate.degrees );
+		} else if( op[i].op.rotate.axis == 2 ){
+			tmp = make_rotZ( op[i].op.rotate.degrees );
+		}
+		matrix_mult( peek(systems), tmp );
+		copy_matrix( tmp, peek(systems) );
+		tmp->lastcol = 0;
 		break;
 	  case PUSH:
 		printf("Push");
